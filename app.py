@@ -13,7 +13,11 @@ def get_key_metrics(ticker):
     url = f"{FMP_BASE_URL}/key-metrics/{ticker}?apikey={FMP_API_KEY}"
     response = requests.get(url)
     if response.status_code == 200:
-        return response.json()
+        data = response.json()
+        if isinstance(data, list):
+            return pd.DataFrame(data)[
+                ["date", "revenuePerShare", "debt", "operatingCashFlowPerShare"]
+            ]  # Filter relevant metrics
     return None
 
 
@@ -66,21 +70,19 @@ def main():
             financial_scores = get_financial_scores(ticker.upper())
 
             # Display Key Metrics
-            if key_metrics:
+            if key_metrics is not None:
                 st.header("Key Metrics")
-                key_metrics_df = pd.DataFrame(key_metrics)
-                numeric_columns = key_metrics_df.select_dtypes(include="number").columns
-                st.write(key_metrics_df)
+                st.write(key_metrics)
 
                 st.write("Visualize Key Metrics:")
                 metric = st.selectbox(
                     "Select a metric to plot",
-                    options=numeric_columns,
+                    options=["revenuePerShare", "debt", "operatingCashFlowPerShare"],
                     key="metrics_plot",
                 )
                 if metric:
                     fig = px.line(
-                        key_metrics_df, x="date", y=metric, title=f"{metric} Over Time"
+                        key_metrics, x="date", y=metric, title=f"{metric} Over Time"
                     )
                     st.plotly_chart(fig)
             else:
@@ -116,27 +118,7 @@ def main():
             # Display Financial Scores
             if financial_scores:
                 st.header("Financial Scores")
-                financial_scores_df = pd.DataFrame([financial_scores])
-                st.write(financial_scores_df)
-
-                st.write("Visualize Financial Scores:")
-                score_metric = st.selectbox(
-                    "Select a score metric to plot",
-                    options=[
-                        col
-                        for col in financial_scores_df.columns
-                        if col not in ["symbol"]
-                    ],
-                    key="financial_scores_plot",
-                )
-                if score_metric:
-                    fig = px.bar(
-                        financial_scores_df,
-                        x="symbol",
-                        y=score_metric,
-                        title=f"{score_metric} for {ticker.upper()}",
-                    )
-                    st.plotly_chart(fig)
+                st.write(pd.DataFrame([financial_scores]))
             else:
                 st.error("Failed to fetch Financial Scores.")
         else:
@@ -145,4 +127,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
