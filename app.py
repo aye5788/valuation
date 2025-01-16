@@ -23,21 +23,24 @@ def get_company_ratings(ticker):
         return response.json()
     return None
 
-# Function to fetch DCF reports
 def get_dcf_reports(ticker):
     url = f"{FMP_BASE_URL}/discounted-cash-flow/{ticker}?apikey={FMP_API_KEY}"
     response = requests.get(url)
     if response.status_code == 200:
-        return response.json()
+        data = response.json()
+        if isinstance(data, list) and len(data) > 0:
+            return data[0]  # Return the first (and only) entry in the list
     return None
 
-# Function to fetch financial scores
 def get_financial_scores(ticker):
-    url = f"{FMP_BASE_URL}/financial-scores/{ticker}?apikey={FMP_API_KEY}"
+    url = f"{FMP_BASE_URL}/v4/score?symbol={ticker}&apikey={FMP_API_KEY}"
     response = requests.get(url)
     if response.status_code == 200:
-        return response.json()
+        data = response.json()
+        if isinstance(data, list) and len(data) > 0:
+            return data[0]  # Return the first (and only) entry in the list
     return None
+
 
 # Streamlit app
 def main():
