@@ -7,6 +7,7 @@ import plotly.express as px
 FMP_BASE_URL = "https://financialmodelingprep.com/api/v3"
 FMP_API_KEY = "j6kCIBjZa1pHewFjf7XaRDlslDxEFuof"  # Replace with your actual API key
 
+
 # Function to fetch key metrics
 def get_key_metrics(ticker):
     url = f"{FMP_BASE_URL}/key-metrics/{ticker}?apikey={FMP_API_KEY}"
@@ -14,6 +15,7 @@ def get_key_metrics(ticker):
     if response.status_code == 200:
         return response.json()
     return None
+
 
 # Function to fetch company ratings
 def get_company_ratings(ticker):
@@ -23,6 +25,8 @@ def get_company_ratings(ticker):
         return response.json()
     return None
 
+
+# Function to fetch DCF reports
 def get_dcf_reports(ticker):
     url = f"{FMP_BASE_URL}/discounted-cash-flow/{ticker}?apikey={FMP_API_KEY}"
     response = requests.get(url)
@@ -32,6 +36,8 @@ def get_dcf_reports(ticker):
             return data[0]  # Return the first (and only) entry in the list
     return None
 
+
+# Function to fetch financial scores
 def get_financial_scores(ticker):
     url = f"{FMP_BASE_URL}/v4/score?symbol={ticker}&apikey={FMP_API_KEY}"
     response = requests.get(url)
@@ -63,15 +69,19 @@ def main():
             if key_metrics:
                 st.header("Key Metrics")
                 key_metrics_df = pd.DataFrame(key_metrics)
+                numeric_columns = key_metrics_df.select_dtypes(include="number").columns
                 st.write(key_metrics_df)
+
                 st.write("Visualize Key Metrics:")
                 metric = st.selectbox(
                     "Select a metric to plot",
-                    options=key_metrics_df.columns[1:],
-                    key="metrics_plot"
+                    options=numeric_columns,
+                    key="metrics_plot",
                 )
                 if metric:
-                    fig = px.line(key_metrics_df, x="date", y=metric, title=f"{metric} Over Time")
+                    fig = px.line(
+                        key_metrics_df, x="date", y=metric, title=f"{metric} Over Time"
+                    )
                     st.plotly_chart(fig)
             else:
                 st.error("Failed to fetch Key Metrics.")
@@ -88,7 +98,7 @@ def main():
                     x="Rating Type",
                     y="Value",
                     title="Company Ratings",
-                    text="Value"
+                    text="Value",
                 )
                 st.plotly_chart(fig)
             else:
@@ -99,33 +109,39 @@ def main():
                 st.header("Discounted Cash Flow (DCF) Report")
                 st.write(f"Date: {dcf_reports['date']}")
                 st.metric(label="Discounted Cash Flow (DCF)", value=dcf_reports["dcf"])
+                st.metric(label="Stock Price", value=dcf_reports.get("Stock Price", "N/A"))
             else:
                 st.error("Failed to fetch DCF Reports.")
 
             # Display Financial Scores
             if financial_scores:
                 st.header("Financial Scores")
-                financial_scores_df = pd.DataFrame(financial_scores)
+                financial_scores_df = pd.DataFrame([financial_scores])
                 st.write(financial_scores_df)
 
                 st.write("Visualize Financial Scores:")
                 score_metric = st.selectbox(
                     "Select a score metric to plot",
-                    options=financial_scores_df.columns[1:],
-                    key="financial_scores_plot"
+                    options=[
+                        col
+                        for col in financial_scores_df.columns
+                        if col not in ["symbol"]
+                    ],
+                    key="financial_scores_plot",
                 )
                 if score_metric:
-                    fig = px.line(
+                    fig = px.bar(
                         financial_scores_df,
-                        x="date",
+                        x="symbol",
                         y=score_metric,
-                        title=f"{score_metric} Over Time"
+                        title=f"{score_metric} for {ticker.upper()}",
                     )
                     st.plotly_chart(fig)
             else:
                 st.error("Failed to fetch Financial Scores.")
         else:
             st.warning("Please enter a valid ticker symbol.")
+
 
 if __name__ == "__main__":
     main()
